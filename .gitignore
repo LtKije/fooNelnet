@@ -1,0 +1,5 @@
+*.pyc
+*.log
+*.csv
+oauth-fooNelnet
+fooNelnet/userInfo.py
