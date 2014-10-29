@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>fooNelnet.nelnetClient &mdash; fooNelnet 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="fooNelnet 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">fooNelnet 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for fooNelnet.nelnetClient</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">selenium</span> <span class="kn">import</span> <span class="n">webdriver</span>
+<span class="kn">from</span> <span class="nn">selenium.common.exceptions</span> <span class="kn">import</span> <span class="n">TimeoutException</span>
+<span class="kn">from</span> <span class="nn">selenium.webdriver.support.ui</span> <span class="kn">import</span> <span class="n">WebDriverWait</span> <span class="c"># available since 2.4.0</span>
+<span class="kn">from</span> <span class="nn">selenium.webdriver.support</span> <span class="kn">import</span> <span class="n">expected_conditions</span> <span class="k">as</span> <span class="n">EC</span> <span class="c"># available since 2.26.0</span>
+<span class="kn">from</span> <span class="nn">selenium.webdriver.common.by</span> <span class="kn">import</span> <span class="n">By</span> <span class="k">as</span> <span class="n">By</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+
+<span class="kn">from</span> <span class="nn">loanServicerClient</span> <span class="kn">import</span> <span class="n">LoanServicerClient</span>
+<span class="kn">from</span> <span class="nn">loanServicerClient</span> <span class="kn">import</span> <span class="n">NotLoggedInError</span>
+
+<div class="viewcode-block" id="NelnetClient"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.nelnetClient.NelnetClient">[docs]</a><span class="k">class</span> <span class="nc">NelnetClient</span><span class="p">(</span><span class="n">LoanServicerClient</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Primary Class for Interfacing with the Nelnet website</span>
+<span class="sd">    </span>
+<span class="sd">        ..note::</span>
+<span class="sd">            Usually uses the values USERNAME and PASSWORD from userInfo.py</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">driver</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#self.driver = webdriver.Firefox()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span> <span class="o">=</span> <span class="n">webdriver</span><span class="o">.</span><span class="n">PhantomJS</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">implicitly_wait</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        
+<div class="viewcode-block" id="NelnetClient.log_in"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.nelnetClient.NelnetClient.log_in">[docs]</a>    <span class="k">def</span> <span class="nf">log_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Logs into nelnet.com, and sets the session and cookies for subsequent operations</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            username(string): The username for the nelnet account</span>
+<span class="sd">            password(string): The password for the nelnet account</span>
+<span class="sd">            </span>
+<span class="sd">        ..note:: Usually uses USERNAME and PASSWORD from userInfo.py</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;http://www.nelnet.net&quot;</span><span class="p">)</span>
+
+        <span class="c">#login page</span>
+        <span class="k">print</span> <span class="s">&quot;entering username&quot;</span>
+        <span class="n">uname_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&quot;ctl00$txtUserName&quot;</span><span class="p">)</span>
+        <span class="n">uname_element</span><span class="o">.</span><span class="n">send_keys</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+        <span class="n">submit_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&quot;ctl00$btnLogin&quot;</span><span class="p">)</span>
+        <span class="n">submit_element</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+        <span class="c">#password page</span>
+        <span class="k">print</span> <span class="s">&quot;entering password&quot;</span>
+        <span class="n">panel_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_id</span><span class="p">(</span><span class="s">&quot;PageBodyPlaceHolder_PasswordPanel&quot;</span><span class="p">)</span>
+        <span class="c">#print panel_element.text()</span>
+        <span class="n">pword_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&quot;ctl00$PageBodyPlaceHolder$Pwd&quot;</span><span class="p">)</span>
+        <span class="n">pword_element</span><span class="o">.</span><span class="n">send_keys</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+        <span class="n">submit_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&quot;ctl00$PageBodyPlaceHolder$Logon&quot;</span><span class="p">)</span>
+        <span class="n">submit_element</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="NelnetClient.retrieve_data"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.nelnetClient.NelnetClient.retrieve_data">[docs]</a>    <span class="k">def</span> <span class="nf">retrieve_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retreives loan data from nelnet</span>
+<span class="sd">        </span>
+<span class="sd">            Returns: loan_data (list): A list of dictionaries containing the following keys:</span>
+<span class="sd">                    - account: The name of the account</span>
+<span class="sd">                    - principle_balance: The current principle balance of the loan</span>
+<span class="sd">                    - interest_rate: The loan&#39;s interest rate</span>
+<span class="sd">                    - accrued_interest: The current amount of accrued interest on the loan</span>
+<span class="sd">                    - outstanding_balance: The total balance on the loan (principal + accrued interest)</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span><span class="p">:</span> <span class="k">raise</span> <span class="n">NotLoggedInError</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;http://mma.nelnet.net/Pages/LoanDetailsAndBenefits.aspx&#39;</span><span class="p">)</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">HTMLParser</span><span class="p">()</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">page_source</span><span class="p">,</span> <span class="n">parser</span><span class="p">)</span>
+        <span class="n">name_divs</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;//div[@class=&quot;bottom-border-dotted show-hide-switch content-full&quot;]&#39;</span><span class="p">)</span>
+        <span class="n">details_divs</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;//div[@class=&quot;rounded-corner-box-simple item accordion&quot;]&#39;</span><span class="p">)</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">div</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">name_divs</span><span class="p">):</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;account&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">div</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;table/tbody/tr/td/text()&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;full_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">div</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;table/tbody/tr/td/text()&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s">&#39;full_name&#39;</span><span class="p">][</span><span class="mi">6</span><span class="p">]</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;principle_balance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details_divs</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;((.//table[1])/tbody/tr)[2]/td/text()&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">();</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;accrued_interest&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details_divs</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;((.//table[1])/tbody/tr)[3]/td/text()&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">();</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;outstanding_balance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details_divs</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;((.//table[1])/tbody/tr)[5]/td/text()&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">();</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;interest_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details_divs</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;((.//table[1])/tbody/tr)[6]/td/text()&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">();</span>
+            <span class="n">item</span><span class="p">[</span><span class="s">&#39;due_date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details_divs</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;((.//table[2])/tbody/tr)[2]/td/text()&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+    
+        <span class="k">return</span> <span class="n">items</span>
+     </div>
+<div class="viewcode-block" id="NelnetClient.make_payment"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.nelnetClient.NelnetClient.make_payment">[docs]</a>    <span class="k">def</span> <span class="nf">make_payment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">account</span><span class="p">,</span> <span class="n">loan</span><span class="p">,</span> <span class="n">amount</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Tells nelnet to initiate a payment request from a preprovided bank account</span>
+<span class="sd">        </span>
+<span class="sd">            Args:</span>
+<span class="sd">                account(string): the name or id of the loan account</span>
+<span class="sd">                loan(string): the name of the loan - usually something like &quot;A,&quot; &quot;B,&quot; &quot;C,&quot; etc.</span>
+<span class="sd">                amount(number): the amount to pay</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#make a payment page</span>
+        <span class="k">print</span> <span class="s">&quot;entering payment amount&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;http://mma.nelnet.net/Pages/MakeAPayment.aspx&quot;</span><span class="p">)</span>
+        <span class="n">show_details_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_{0}_href&#39;</span> <span class="o">%</span> <span class="n">account</span><span class="p">)</span>
+        <span class="n">show_details_element</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">WebDriverWait</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">until</span><span class="p">(</span><span class="n">EC</span><span class="o">.</span><span class="n">element_to_be_clickable</span><span class="p">((</span><span class="n">By</span><span class="o">.</span><span class="n">NAME</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_GroupPmtAmount&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">account</span><span class="p">,</span> <span class="n">loan</span><span class="p">))))</span>
+            
+            <span class="n">amount_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_GroupPmtAmount&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">account</span><span class="p">,</span> <span class="n">loan</span><span class="p">))</span>
+            <span class="n">amount_element</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="n">amount_element</span><span class="o">.</span><span class="n">send_keys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">amount</span><span class="p">))</span>
+            <span class="n">submit_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&quot;ctl00$MainContent$BtnMakeAPayment&quot;</span><span class="p">)</span>
+            <span class="n">submit_element</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+        
+            <span class="c">#confirmation page</span>
+            <span class="k">print</span> <span class="s">&quot;confirming payment&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_name</span><span class="p">(</span><span class="s">&quot;agree&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_id</span><span class="p">(</span><span class="s">&quot;BtnConfirm&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+            
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">pass</span>
+            </div>
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">fooNelnet 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Jacob Boyle.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

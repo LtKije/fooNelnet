@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>fooNelnet.GDataClient &mdash; fooNelnet 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="fooNelnet 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">fooNelnet 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for fooNelnet.GDataClient</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">httplib2</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">gdata.gauth</span>
+<span class="kn">import</span> <span class="nn">gdata.spreadsheets.client</span>
+
+<span class="kn">import</span> <span class="nn">gdata.docs.client</span>
+
+<span class="kn">from</span> <span class="nn">oauth2client.client</span> <span class="kn">import</span> <span class="n">OAuth2WebServerFlow</span>
+<span class="kn">from</span> <span class="nn">oauth2client.file</span> <span class="kn">import</span> <span class="n">Storage</span>
+<span class="kn">from</span> <span class="nn">gdata.spreadsheets.data</span> <span class="kn">import</span> <span class="n">ListEntry</span>
+
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+
+<span class="c">#Google Data API values</span>
+<span class="kn">from</span> <span class="nn">userInfo</span> <span class="kn">import</span> <span class="n">GDATA_CLIENT_ID</span>
+<span class="kn">from</span> <span class="nn">userInfo</span> <span class="kn">import</span> <span class="n">GDATA_SECRET</span>
+<span class="kn">from</span> <span class="nn">userInfo</span> <span class="kn">import</span> <span class="n">REDIRECT_URI</span>
+<span class="kn">from</span> <span class="nn">userInfo</span> <span class="kn">import</span> <span class="n">GSPREADSHEET_NAME</span>
+<span class="kn">from</span> <span class="nn">userInfo</span> <span class="kn">import</span> <span class="n">GSPREADSHEET_WORKSHEET_NAME</span>
+<span class="kn">from</span> <span class="nn">userInfo</span> <span class="kn">import</span> <span class="n">GSPREADSHEET_PAYMENT_WORKSHEET_NAME</span>
+
+<div class="viewcode-block" id="FooNelnetGoogleClient"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient">[docs]</a><span class="k">class</span> <span class="nc">FooNelnetGoogleClient</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Class for sending data to google drive documents</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">        In order to communicate with google drive you must first create a project under the google developers console (http://console.developers.google.com) and grant it access to Drive API and the Drive SDK. This will allow it to create and modify spreadsheets.</span>
+<span class="sd">        </span>
+<span class="sd">        Since the drive API uses OAuth2 you will need to get the client id, the client secret, and the redirect uri for a native application. These must be set to the correct values in userInfo.py  </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">_auth2token</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">_gd_client</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">_ss_client</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">_reauthorize</span> <span class="o">=</span> <span class="bp">None</span>
+    
+<div class="viewcode-block" id="FooNelnetGoogleClient.get_oauth_token"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient.get_oauth_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_oauth_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Gets the correct OAuth token for the google data client</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            an oauth2 token that can authorize the gdata client to work with google drive</span>
+<span class="sd">            </span>
+<span class="sd">        .. note::</span>
+<span class="sd">            The OAuth token is stored locally in a file caled oauth-fooNelnet. If this file does not exist, the app will run through a simple flow to generate it. This includes directing the user to a webpage - which authorizes the app to access the google drive api. The webpage returns a confirmation code which the user must input into the app to get oauth working. The app will then create the oauth-fooNelnet file and continue without needing confirmation again.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth2token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth2token</span>
+        <span class="c"># Check https://developers.google.com/drive/scopes for all available scopes</span>
+        <span class="n">OAUTH_SCOPE</span> <span class="o">=</span> <span class="s">&#39;https://docs.google.com/feeds/ https://spreadsheets.google.com/feeds/&#39;</span>
+        
+        <span class="n">storage_fname</span> <span class="o">=</span> <span class="s">&#39;oauth-fooNelnet&#39;</span>
+        <span class="c">#first we check if the authorization file exists</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reauthorize</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">storage_fname</span><span class="p">):</span>
+            <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">(</span><span class="n">storage_fname</span><span class="p">)</span>
+            <span class="n">credentials</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Run through OAuth Flow and check credentials:</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">OAuth2WebServerFlow</span><span class="p">(</span><span class="n">GDATA_CLIENT_ID</span><span class="p">,</span> <span class="n">GDATA_SECRET</span><span class="p">,</span> <span class="n">OAUTH_SCOPE</span><span class="p">,</span> <span class="n">REDIRECT_URI</span><span class="p">)</span>
+            <span class="n">authorize_url</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">step1_get_authorize_url</span><span class="p">()</span>
+            <span class="k">print</span> <span class="s">&#39;Go to the following link on your browser: &#39;</span> <span class="o">+</span> <span class="n">authorize_url</span>
+            <span class="n">code</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&#39;Enter verification code: &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">credentials</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">step2_exchange</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+    
+            <span class="c"># Save it to a file:</span>
+            <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">(</span><span class="n">storage_fname</span><span class="p">)</span>
+            <span class="n">storage</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span>
+    
+        <span class="c">#authorize transaction</span>
+        <span class="n">http</span> <span class="o">=</span> <span class="n">httplib2</span><span class="o">.</span><span class="n">Http</span><span class="p">()</span>
+        <span class="n">http</span> <span class="o">=</span> <span class="n">credentials</span><span class="o">.</span><span class="n">authorize</span><span class="p">(</span><span class="n">http</span><span class="p">)</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auth2token</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">gauth</span><span class="o">.</span><span class="n">OAuth2TokenFromCredentials</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auth2token</span>
+    </div>
+<div class="viewcode-block" id="FooNelnetGoogleClient.get_docs_client"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient.get_docs_client">[docs]</a>    <span class="k">def</span> <span class="nf">get_docs_client</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Gets or creates a client to access Google Drive and create documents</span>
+<span class="sd">            </span>
+<span class="sd">            Returns:</span>
+<span class="sd">                a gdata.docs.client.DocsClient object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gd_client</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gd_client</span>
+        
+        <span class="n">auth2token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_oauth_token</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gd_client</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">docs</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">DocsClient</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gd_client</span> <span class="o">=</span> <span class="n">auth2token</span><span class="o">.</span><span class="n">authorize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_gd_client</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gd_client</span>
+        </div>
+<div class="viewcode-block" id="FooNelnetGoogleClient.get_spreadsheets_client"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient.get_spreadsheets_client">[docs]</a>    <span class="k">def</span> <span class="nf">get_spreadsheets_client</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Gets or creates a Google Spreadsheet client to access spreadsheets and add values to them</span>
+<span class="sd">            </span>
+<span class="sd">            Returns:</span>
+<span class="sd">                a gdata.docs.client.SpreadsheetsClient object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ss_client</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ss_client</span>
+        
+        <span class="n">auth2token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_oauth_token</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ss_client</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">spreadsheets</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">SpreadsheetsClient</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ss_client</span> <span class="o">=</span> <span class="n">auth2token</span><span class="o">.</span><span class="n">authorize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ss_client</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ss_client</span>
+    </div>
+<div class="viewcode-block" id="FooNelnetGoogleClient.get_or_create_spreadsheet"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient.get_or_create_spreadsheet">[docs]</a>    <span class="k">def</span> <span class="nf">get_or_create_spreadsheet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spreadsheet_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Queries Google drive for an existing spreadsheet, and creates one if not found.</span>
+<span class="sd">            </span>
+<span class="sd">            Returns:</span>
+<span class="sd">                a key for accessing a spreadsheet in subsequent operations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gd_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_docs_client</span><span class="p">()</span>
+        
+        <span class="c">#find the spreadsheet or create if it doesn&#39;t exist</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">docs</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">DocsQuery</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">spreadsheet_name</span>
+        <span class="p">)</span>
+        
+        <span class="n">resources</span> <span class="o">=</span> <span class="n">gd_client</span><span class="o">.</span><span class="n">GetResources</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">spreadsheet</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c">#check if the spreadsheet is empty</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">resources</span><span class="o">.</span><span class="n">entry</span><span class="p">:</span>
+            <span class="c">#create a new spreadsheet</span>
+            <span class="k">print</span> <span class="s">&#39;creating spreadsheet named: &#39;</span> <span class="o">+</span> <span class="n">spreadsheet_name</span>
+            <span class="n">spreadsheet</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">docs</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Resource</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s">&#39;spreadsheet&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">spreadsheet_name</span><span class="p">)</span>
+            <span class="n">spreadsheet</span> <span class="o">=</span> <span class="n">gd_client</span><span class="o">.</span><span class="n">CreateResource</span><span class="p">(</span><span class="n">spreadsheet</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">spreadsheet</span> <span class="o">=</span> <span class="n">resources</span><span class="o">.</span><span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">spreadsheet_key</span> <span class="o">=</span> <span class="n">spreadsheet</span><span class="o">.</span><span class="n">GetId</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;%3A&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">spreadsheet_key</span>
+        </div>
+<div class="viewcode-block" id="FooNelnetGoogleClient.sendToGData"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient.sendToGData">[docs]</a>    <span class="k">def</span> <span class="nf">sendToGData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loan_data</span><span class="p">,</span> <span class="n">reauthorize</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sends loan data to a Google Drive Spreadsheet</span>
+<span class="sd">            Args: loan_data (list): A list of dictionaries containing the following keys:</span>
+<span class="sd">                    - account: The name of the account</span>
+<span class="sd">                    - principle_balance: The current principle balance of the loan</span>
+<span class="sd">                    - interest_rate: The loan&#39;s interest rate</span>
+<span class="sd">                    - accrued_interest: The current amount of accrued interest on the loan</span>
+<span class="sd">                    - outstanding_balance: The total balance on the loan (principal + accrued interest)</span>
+<span class="sd">                    </span>
+<span class="sd">            Ouput:</span>
+<span class="sd">                loads the data into a Google Spreadsheet</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reauthorize</span> <span class="o">=</span> <span class="n">reauthorize</span>
+        
+        <span class="n">spreadsheet_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_or_create_spreadsheet</span><span class="p">(</span><span class="n">GSPREADSHEET_NAME</span><span class="p">)</span>
+        
+        <span class="c">#now we put the data into the spreadsheet</span>
+        <span class="n">ss_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_spreadsheets_client</span><span class="p">()</span>
+        
+        <span class="c">#check to make sure we have the correct worksheet</span>
+        <span class="n">worksheets</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">GetWorksheets</span><span class="p">(</span><span class="n">spreadsheet_key</span><span class="p">)</span>
+        <span class="n">ws_id</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">sheet</span> <span class="ow">in</span> <span class="n">worksheets</span><span class="o">.</span><span class="n">entry</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sheet</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="n">GSPREADSHEET_WORKSHEET_NAME</span><span class="p">:</span> <span class="n">ws_id</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">GetWorksheetId</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ws_id</span><span class="p">:</span>
+            <span class="c">#we need to create the worksheet:</span>
+            <span class="k">print</span> <span class="s">&#39;creating worksheet named: &#39;</span> <span class="o">+</span> <span class="n">GSPREADSHEET_WORKSHEET_NAME</span>
+            <span class="n">worksheet</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">AddWorksheet</span><span class="p">(</span><span class="n">spreadsheet_key</span><span class="p">,</span> <span class="n">GSPREADSHEET_WORKSHEET_NAME</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">loan_data</span><span class="p">)</span><span class="o">*</span><span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">ws_id</span> <span class="o">=</span> <span class="n">worksheet</span><span class="o">.</span><span class="n">GetWorksheetId</span><span class="p">()</span>
+            
+            <span class="c">#generate header names and add via cells batch request:</span>
+            <span class="n">cells_feed</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">GetCells</span><span class="p">(</span><span class="n">spreadsheet_key</span><span class="p">,</span> <span class="n">ws_id</span><span class="p">)</span>
+            <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;date&#39;</span><span class="p">)</span>
+    
+            <span class="n">ind</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="k">for</span> <span class="n">loan_info</span> <span class="ow">in</span> <span class="n">loan_data</span><span class="p">:</span>
+                <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ind</span><span class="p">,</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;_account&#39;</span><span class="p">)</span>
+                <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ind</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;_principle_balance&#39;</span><span class="p">)</span>
+                <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ind</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;_interest_rate&#39;</span><span class="p">)</span>
+                <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ind</span><span class="o">+</span><span class="mi">3</span><span class="p">,</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;_accrued_interest&#39;</span><span class="p">)</span>
+                <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ind</span><span class="o">+</span><span class="mi">4</span><span class="p">,</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;_outstanding_balance&#39;</span><span class="p">)</span>
+                <span class="n">ind</span> <span class="o">+=</span> <span class="mi">4</span>
+            
+            <span class="n">updated</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">Batch</span><span class="p">(</span><span class="n">cells_feed</span><span class="p">,</span> <span class="n">cells_feed</span><span class="o">.</span><span class="n">FindBatchLink</span><span class="p">(),</span> <span class="n">force</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        
+        <span class="c">#add the row</span>
+        <span class="n">rowDict</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;date&#39;</span><span class="p">:</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y/%m/</span><span class="si">%d</span><span class="s"> %H:%M:%S&quot;</span><span class="p">)}</span>
+        <span class="k">for</span> <span class="n">loan_info</span> <span class="ow">in</span> <span class="n">loan_data</span><span class="p">:</span>
+            <span class="n">rowDict</span><span class="p">[</span><span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">+</span><span class="s">&#39;account&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;account&#39;</span><span class="p">]</span>
+            <span class="n">rowDict</span><span class="p">[</span><span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">+</span><span class="s">&#39;principlebalance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;principle_balance&#39;</span><span class="p">]</span>
+            <span class="n">rowDict</span><span class="p">[</span><span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">+</span><span class="s">&#39;interestrate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;interest_rate&#39;</span><span class="p">]</span>
+            <span class="n">rowDict</span><span class="p">[</span><span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">+</span><span class="s">&#39;accruedinterest&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;accrued_interest&#39;</span><span class="p">]</span>
+            <span class="n">rowDict</span><span class="p">[</span><span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">+</span><span class="s">&#39;outstandingbalance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">loan_info</span><span class="p">[</span><span class="s">&#39;outstanding_balance&#39;</span><span class="p">]</span> 
+            
+        <span class="n">listEntry</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">spreadsheets</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ListEntry</span><span class="p">()</span>
+        <span class="n">listEntry</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">rowDict</span><span class="p">)</span>
+        <span class="n">ss_client</span><span class="o">.</span><span class="n">AddListEntry</span><span class="p">(</span><span class="n">listEntry</span><span class="p">,</span> <span class="n">spreadsheet_key</span><span class="p">,</span> <span class="n">ws_id</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="FooNelnetGoogleClient.sendPaymentInfoToGData"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.GDataClient.FooNelnetGoogleClient.sendPaymentInfoToGData">[docs]</a>    <span class="k">def</span> <span class="nf">sendPaymentInfoToGData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loan_name</span><span class="p">,</span> <span class="n">amount</span><span class="p">,</span> <span class="n">reauthorize</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sends payment data to a google spreadsheet</span>
+<span class="sd">    </span>
+<span class="sd">        Args:</span>
+<span class="sd">            loan_name (string): The name of the loan</span>
+<span class="sd">            amount (number): The amount paid.</span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reauthorize</span> <span class="o">=</span> <span class="n">reauthorize</span>
+        <span class="n">spreadsheet_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_or_create_spreadsheet</span><span class="p">(</span><span class="n">GSPREADSHEET_NAME</span><span class="p">)</span>
+        
+        <span class="c">#now we put the data into the spreadsheet</span>
+        <span class="n">ss_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_spreadsheets_client</span><span class="p">()</span>
+        
+        <span class="c">#check to make sure we have the correct worksheet</span>
+        <span class="n">worksheets</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">GetWorksheets</span><span class="p">(</span><span class="n">spreadsheet_key</span><span class="p">)</span>
+        <span class="n">ws_id</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">sheet</span> <span class="ow">in</span> <span class="n">worksheets</span><span class="o">.</span><span class="n">entry</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sheet</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="n">GSPREADSHEET_PAYMENT_WORKSHEET_NAME</span><span class="p">:</span> <span class="n">ws_id</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">GetWorksheetId</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ws_id</span><span class="p">:</span>
+            <span class="c">#we need to create the worksheet:</span>
+            <span class="k">print</span> <span class="s">&#39;creating worksheet named: &#39;</span> <span class="o">+</span> <span class="n">GSPREADSHEET_PAYMENT_WORKSHEET_NAME</span>
+            <span class="n">worksheet</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">AddWorksheet</span><span class="p">(</span><span class="n">spreadsheet_key</span><span class="p">,</span> <span class="n">GSPREADSHEET_PAYMENT_WORKSHEET_NAME</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="n">ws_id</span> <span class="o">=</span> <span class="n">worksheet</span><span class="o">.</span><span class="n">GetWorksheetId</span><span class="p">()</span>
+            
+            <span class="c">#generate header names and add via cells batch request:</span>
+            <span class="n">cells_feed</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">GetCells</span><span class="p">(</span><span class="n">spreadsheet_key</span><span class="p">,</span> <span class="n">ws_id</span><span class="p">)</span>
+            <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;date&#39;</span><span class="p">)</span>
+            <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;loan&#39;</span><span class="p">)</span>
+            <span class="n">cells_feed</span><span class="o">.</span><span class="n">add_set_cell</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s">&#39;payment amount&#39;</span><span class="p">)</span>
+            
+            <span class="n">updated</span> <span class="o">=</span> <span class="n">ss_client</span><span class="o">.</span><span class="n">Batch</span><span class="p">(</span><span class="n">cells_feed</span><span class="p">,</span> <span class="n">cells_feed</span><span class="o">.</span><span class="n">FindBatchLink</span><span class="p">(),</span> <span class="n">force</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        
+        <span class="c">#add the row</span>
+        <span class="n">rowDict</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;date&#39;</span><span class="p">:</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y/%m/</span><span class="si">%d</span><span class="s"> %H:%M:%S&quot;</span><span class="p">),</span> <span class="s">&#39;loan&#39;</span><span class="p">:</span><span class="n">loan_name</span><span class="p">,</span> <span class="s">&#39;paymentamount&#39;</span><span class="p">:</span><span class="nb">str</span><span class="p">(</span><span class="n">amount</span><span class="p">)}</span>
+            
+        <span class="n">listEntry</span> <span class="o">=</span> <span class="n">gdata</span><span class="o">.</span><span class="n">spreadsheets</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ListEntry</span><span class="p">()</span>
+        <span class="n">listEntry</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">rowDict</span><span class="p">)</span>
+        <span class="n">ss_client</span><span class="o">.</span><span class="n">AddListEntry</span><span class="p">(</span><span class="n">listEntry</span><span class="p">,</span> <span class="n">spreadsheet_key</span><span class="p">,</span> <span class="n">ws_id</span><span class="p">)</span>
+     </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">fooNelnet 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Jacob Boyle.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

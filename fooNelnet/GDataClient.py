@@ -133,8 +133,7 @@ class FooNelnetGoogleClient:
         
     def sendToGData(self, loan_data, reauthorize=False):
         """Sends loan data to a Google Drive Spreadsheet
-            Args:
-                loan_data (list): A list of dictionaries containing the following keys:
+            Args: loan_data (list): A list of dictionaries containing the following keys:
                     - account: The name of the account
                     - principle_balance: The current principle balance of the loan
                     - interest_rate: The loan's interest rate

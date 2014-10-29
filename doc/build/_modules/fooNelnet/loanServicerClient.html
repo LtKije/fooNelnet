@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>fooNelnet.loanServicerClient &mdash; fooNelnet 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="fooNelnet 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">fooNelnet 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for fooNelnet.loanServicerClient</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="NotLoggedInError"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.loanServicerClient.NotLoggedInError">[docs]</a><span class="k">class</span> <span class="nc">NotLoggedInError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+<div class="viewcode-block" id="NotImplementedError"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.loanServicerClient.NotImplementedError">[docs]</a><span class="k">class</span> <span class="nc">NotImplementedError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="LoanServicerClient"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.loanServicerClient.LoanServicerClient">[docs]</a><span class="k">class</span> <span class="nc">LoanServicerClient</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Base class for Loan Servicer Clients</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">        This app could work just as well with other loan servicers such as Sally Mae, Navient, etc.</span>
+<span class="sd">        This base class provides a level of abstractions so that the other servicers could be added easily without modifing other functionality in the app.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logged_in</span> <span class="o">=</span> <span class="bp">False</span>
+<div class="viewcode-block" id="LoanServicerClient.login"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.loanServicerClient.LoanServicerClient.login">[docs]</a>    <span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Logs into the loan servicers website, and sets the session and cookies for subsequent operations</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            username(string): The username for the loan servicer account</span>
+<span class="sd">            password(string): The password for the loan servicer account</span>
+<span class="sd">            </span>
+<span class="sd">        ..note:: Usually uses USERNAME and PASSWORD from userInfo.py</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="LoanServicerClient.retrive_data"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.loanServicerClient.LoanServicerClient.retrive_data">[docs]</a>    <span class="k">def</span> <span class="nf">retrive_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retreives loan data from the servicer</span>
+<span class="sd">        </span>
+<span class="sd">            Returns: loan_data (list): A list of dictionaries containing the following keys:</span>
+<span class="sd">                    - account: The name of the account</span>
+<span class="sd">                    - principle_balance: The current principle balance of the loan</span>
+<span class="sd">                    - interest_rate: The loan&#39;s interest rate</span>
+<span class="sd">                    - accrued_interest: The current amount of accrued interest on the loan</span>
+<span class="sd">                    - outstanding_balance: The total balance on the loan (principal + accrued interest)</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="LoanServicerClient.make_payment"><a class="viewcode-back" href="../../fooNelnet.html#fooNelnet.loanServicerClient.LoanServicerClient.make_payment">[docs]</a>    <span class="k">def</span> <span class="nf">make_payment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">account</span><span class="p">,</span> <span class="n">loan</span><span class="p">,</span> <span class="n">amount</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Tells the servicer to initiate a payment request from a preprovided bank account</span>
+<span class="sd">        </span>
+<span class="sd">            Args:</span>
+<span class="sd">                account(string): the name or id of the loan account</span>
+<span class="sd">                loan(string): the name of the loan - usually something like &quot;A,&quot; &quot;B,&quot; &quot;C,&quot; etc.</span>
+<span class="sd">                amount(number): the amount to pay</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">fooNelnet 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Jacob Boyle.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>
