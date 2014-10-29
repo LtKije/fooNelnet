@@ -7,6 +7,19 @@ from userInfo import CSV_FILE_NAME
 from userInfo import PAYMENT_CSV_FILE_NAME
 
 def appendToCSV(loan_data):
+    """Appends received loan data to a CSV file
+    
+    Args:
+        loan_data (list): A list of dictionaries containing the following keys:
+            - account: The name of the account
+            - principle_balance: The current principle balance of the loan
+            - interest_rate: The loan's interest rate
+            - accrued_interest: The current amount of accrued interest on the loan
+            - outstanding_balance: The total balance on the loan (principal + accrued interest)
+    
+    Output: Saves (or appends to) a local csv file - defined in userInfo.py
+    
+    """
     # generate csv data line
     line = time.strftime("%Y/%m/%d %H:%M:%S")
     for loan_info in loan_data:
@@ -43,6 +56,15 @@ def appendToCSV(loan_data):
         fd.close()
         
 def appendPaymentInfoToCSV(loan_name, amount):
+    """Appends received loan data to a CSV file
+    
+    Args:
+        loan_name (string): The name of the loan
+        amount (number): The amount paid.
+    
+    Output: Saves (or appends to) a local csv file - defined in userInfo.py
+    
+    """
     line = '%s,%s,%s' % (time.strftime("%Y/%m/%d %H:%M:%S"), loan_name, amount)
     if os.path.isfile(PAYMENT_CSV_FILE_NAME):
         #we just need to append
