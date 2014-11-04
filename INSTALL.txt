@@ -1,0 +1,26 @@
+The core portion of FooNelnet logs into Nelnet.com, records your current loan info, and (if you want it to) make a payment. To get this running you will need the following libraries:
+
+lxml - Library for processing XML and HTML (http://lxml.de/)
+	-Can be installed with pip:
+		pip install lxml
+	
+selenium - Web Browser Automation system (http://www.seleniumhq.org/)
+	-During development I went back and forth between using Selenium or a browserless web-crawler library - such as Scrapy or Mechanize. Ultimately because Nelnet uses a lot of javascript and hidden variables, writing a bot with Selenium proved to be much more simple - and thus would be easier to extend to handle other loan servicers. The python bindings for Selenium can be installed with pip:
+		pip install selenium
+		
+	-However, Selenium requires an external browser to run. I've currently set it up to use PhantomJS because it is headless, but it is simple to use Firefox as well. To use FooNelnet in it's default configuration you'll need to install PhantomJS and make sure it's available in your PATH.
+	
+
+The other feature on FooNelnet is that it can automatically save your data to a Google Drive Spreadsheet. There are more extensive notes on how this works in the documentation, but it does require the following libraries:
+	
+httplib2 - A comprehensive HTTP client library in Python (https://github.com/jcgregorio/httplib2)
+	-Can be installed with pip:
+		pip install httplib2
+
+google-api-python-client - the Python client for Google Apis (https://github.com/google/google-api-python-client)
+	-Can be installed with pip:
+		pip install google-api-python-client
+
+FooNelnet isn't quite at python module state yet - and I'm not sure if I want it to be. Currently I run it as a seperate application that I call daily in a cron job.
+
+Good luck! 
