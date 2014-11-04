@@ -9,3 +9,8 @@ I built FooNelnet because I wanted to keep better track of my student loans, and
 Be aware that FooNelnet will take tell Nelnet to initiate money transfers out of you bank account. There are no sanity checks, so if set up improperly it could empty or overdraw on your account.
 
 Note: FooNelnet is named after the classic programming term "foo." The fact that you could phonetically respell it as FU-Nelnet is entirely coincidental.
+
+Usage:
+	python fooNelnet.py [-record_Data] [-make_Payment]
+	
+	In order to log into Nelnet and Google Drive FooNelnet looks for user info from the file userInfo.py. An example file (userInfo_example.py) is included. In order to run FooNelnet you need to put your own username and password into userInfo_example.py and rename it to userInfo.py. More info on this in the documentation.
