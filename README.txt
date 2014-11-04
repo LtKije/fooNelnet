@@ -14,3 +14,5 @@ Usage:
 	python fooNelnet.py [-record_Data] [-make_Payment]
 	
 	In order to log into Nelnet and Google Drive FooNelnet looks for user info from the file userInfo.py. An example file (userInfo_example.py) is included. In order to run FooNelnet you need to put your own username and password into userInfo_example.py and rename it to userInfo.py. More info on this in the documentation.
+	
+FYI this is the first piece of code I've ever released in an open-source manner. I imagine there are a lot of things that are clear to me, but make no sense to anyone else. If you have any questions, feel free to send me an email - jacob.boo.boyle@gmail.com
