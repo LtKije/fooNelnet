@@ -10,7 +10,7 @@ I built fooNelnet because I wanted to keep better track of my student loans, and
 
 Be aware that fooNelnet will take tell Nelnet to initiate money transfers out of you bank account. There are no sanity checks, so if set up improperly it could empty or overdraw on your account.
 
-fooNelnet is named after the classic programming term "foo." The fact that you could phonetically respell it as F-U-Nelnet is entirly coincidental.
+fooNelnet is named after the classic programming term "foo." The fact that you could phonetically respell it as FU-Nelnet is entirly coincidental.
 
 Usage:
     ./fooNelnet.py [-record_data] [-make_payment]
@@ -29,8 +29,9 @@ from fooNelnet.userInfo import PASSWORD
 from fooNelnet.userInfo import MONTHLY_PAYMENT_AMOUNT
 from fooNelnet.appendToCSV import appendToCSV
 from fooNelnet.appendToCSV import appendPaymentInfoToCSV
+from fooNelnet.appendToCSV import append_DNA_info_to_csv
 from fooNelnet.GDataClient import FooNelnetGoogleClient
-from fooNelnet.seleniumClient import NelnetClient
+from fooNelnet.nelnetClient import NelnetClient
 
 def main(retain_data=True, make_payment=False):
     print 'getting loan data from nelnet...'

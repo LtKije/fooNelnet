@@ -76,3 +76,42 @@ def appendPaymentInfoToCSV(loan_name, amount):
         fd.write('date,loan,amount\n')
         fd.write(line + '\n')
         fd.close()
+
+def append_DNA_info_to_csv(dna_info):
+    """Appends DNA info to csv
+    
+    Nelnet - and maybe other providers - have a DNA Threshold for each loan. The loan will only advance the due date if the payment exceeds that threshold. I'm kind of worried that this will make it not recognize the smaller daily payments and slap me with late fees or something. 
+    So I want to keep track of these values. Ideally they should go down according to the amount we pay each day.
+    
+    Args:
+        dna_info (list): A list of dictionaries with the following keys:
+            - account: the account+loan name
+            - dna_threshold: the DNA Threshold on the loan
+    """
+    line = time.strftime("%Y/%m/%d %H:%M:%S")
+    for threshold in dna_info:
+        needed_values = [
+            threshold['account'].replace(',', ''),
+            threshold['dna_threshold'].replace(',', '')
+        ]
+        line += ',' + ','.join(needed_values)
+    
+    if os.path.isfile('DNAThresholds.csv'):
+        # just append to the end
+        fd = open('DNAThresholds.csv', 'a')
+        fd.write(line + '\n')
+        fd.close()
+    else:
+        # create the file, add column names for the first row, then write the current data
+        column_names = 'date'
+        for threshold in dna_info:
+            needed_values = [
+                threshold['account']+'_account',
+                threshold['account']+'_dna_threshold'
+            ]
+            column_names += ',' + ','.join(needed_values)
+            
+        fd = open('DNAThresholds.csv', 'w')
+        fd.write(column_names + '\n')
+        fd.write(line + '\n')
+        fd.close()

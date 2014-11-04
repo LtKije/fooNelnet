@@ -114,6 +114,20 @@ class NelnetClient(LoanServicerClient):
             
         finally:
             pass
-            
+    
+    def retrieve_DNA_Thresholds(self):
+        self.driver.get("http://mma.nelnet.net/Pages/MakeAPayment.aspx")
+        parser = etree.HTMLParser()
+        root = etree.fromstring(self.driver.page_source, parser)
+        loans = root.xpath('//tr[@id="MainContent_TREducationLoansAccordion"]//ul')
+        thresholds = []
+        for loan in loans:
+            threshold = {}
+            threshold['account'] = loan.xpath('@id')[0].strip()
+            threshold['dna_threshold'] = loan.xpath('.//input[@type="hidden"]/@value')[0].strip()
+            thresholds.append(threshold)
+        
+        return thresholds
+    
     def __del__(self):
         self.driver.quit()
