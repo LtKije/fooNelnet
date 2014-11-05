@@ -19,5 +19,8 @@ GSPREADSHEET_WORKSHEET_NAME = 'Loan Info'
 GSPREADSHEET_PAYMENT_WORKSHEET_NAME = 'Loan Payments'
 
 #The $ amount you want to automatically spend per month
-#this gets divided by the number of days in the month when daily payments are made
 MONTHLY_PAYMENT_AMOUNT = 1000
+
+#The number of days between payments
+#you want to optimize this according to payments
+PAYMENT_RATE_DAYS = 14
