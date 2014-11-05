@@ -32,6 +32,7 @@ from fooNelnet.appendToCSV import appendPaymentInfoToCSV
 from fooNelnet.appendToCSV import append_DNA_info_to_csv
 from fooNelnet.GDataClient import FooNelnetGoogleClient
 from fooNelnet.nelnetClient import NelnetClient
+from fooNelnet.paymentCalculator import calculateNextPayment
 
 def main(retain_data=True, make_payment=False):
     print 'getting loan data from nelnet...'
@@ -49,11 +50,7 @@ def main(retain_data=True, make_payment=False):
         
     if make_payment:
         payment_data = sorted(data, key=lambda k:float(k['interest_rate']), reverse=True)
-        #get number of days in month
-        now = datetime.datetime.now()
-        month_range = monthrange(now.year, now.month)
-        amount = round(float(MONTHLY_PAYMENT_AMOUNT) / float(month_range[1]), 2)
-
+        amount = calculateNextPayment()
         client.make_payment(payment_data[0]['account'], payment_data[0]['name'], amount)
 
         #now we need to retain the payment data for our records:
