@@ -31,6 +31,7 @@ def appendToCSV(loan_data):
             loan_info['outstanding_balance'].replace(',','')
         ]
         line += ',' + ','.join(needed_values)
+        print line
         
     if os.path.isfile(CSV_FILE_NAME):
         # just append to the end

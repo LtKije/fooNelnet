@@ -27,14 +27,23 @@ from calendar import monthrange
 from fooNelnet.userInfo import USERNAME
 from fooNelnet.userInfo import PASSWORD
 from fooNelnet.userInfo import MONTHLY_PAYMENT_AMOUNT
+from fooNelnet.userInfo import PAYMENT_RATE_DAYS
 from fooNelnet.appendToCSV import appendToCSV
 from fooNelnet.appendToCSV import appendPaymentInfoToCSV
 from fooNelnet.appendToCSV import append_DNA_info_to_csv
 from fooNelnet.GDataClient import FooNelnetGoogleClient
 from fooNelnet.nelnetClient import NelnetClient
-from fooNelnet.paymentCalculator import calculateNextPayment
+from fooNelnet.paymentCalculator import calculate_payment_by_num_days
+from fooNelnet.paymentCalculator import get_days_since_last_payment
 
 def main(retain_data=True, make_payment=False):
+    #check to see if payment interval has passed:
+    num_days = get_days_since_last_payment()
+    if num_days < PAYMENT_RATE_DAYS:
+        print "no payments to make: {0}".format(num_days)
+        return
+    
+    print 'making payment'
     print 'getting loan data from nelnet...'
     client = NelnetClient()
     client.log_in(USERNAME, PASSWORD)
@@ -50,7 +59,7 @@ def main(retain_data=True, make_payment=False):
         
     if make_payment:
         payment_data = sorted(data, key=lambda k:float(k['interest_rate']), reverse=True)
-        amount = calculateNextPayment()
+        amount = calculate_payment_by_num_days(num_days)
         client.make_payment(payment_data[0]['account'], payment_data[0]['name'], amount)
 
         #now we need to retain the payment data for our records:
